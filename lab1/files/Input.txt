@@ -1,0 +1,19 @@
+<?php
+$i=0;
+a or b;
+a and c
+while($i<10){
+	$a = 2;
+	if($a==2 and $a>3 or $b>=-4){
+		$b=4;
+		$____12a;
+		#pepepepepepep
+		//e[ee[e[e[
+		/*eeeeeeeeeeeee*/
+		echo('efefefefefef');
+		echo("$_______a $____12a");
+		pow(2,3);
+	}
+}
+?>
+

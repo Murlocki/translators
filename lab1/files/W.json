@@ -1,0 +1,16 @@
+{
+    "W1": "if",
+    "W2": "else",
+    "W3": "else if",
+    "W4": "while",
+    "W5": "break",
+    "W6": "continue",
+    "W7": "function",
+    "W8": "return",
+    "W9": "echo",
+    "W10": "true",
+    "W11": "false",
+    "W12": "array",
+    "W13": "null",
+    "W14": "do"
+}
