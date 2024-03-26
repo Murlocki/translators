@@ -1,9 +1,11 @@
 <?php
-$i=0;
+$i[$_a]=1;
+"$$a"
 a or b;
 a and c
+$b = 1.453;
 while($i<10){
-	$a = 2;
+	$a[1] = 2;
 	if($a==2 and $a>3 or $b>=-4){
 		$b=4;
 		$____12a;
@@ -11,7 +13,7 @@ while($i<10){
 		//e[ee[e[e[
 		/*eeeeeeeeeeeee*/
 		echo('efefefefefef');
-		echo("$_______a $____12a");
+		echo("$_______a[2] $____12a");
 		pow(2,3);
 	}
 }

@@ -8,9 +8,9 @@ class LecAnalysis():
             token_code = str(len(self.tokens[token_class])+1)
             self.tokens[token_class][token_value] = token_class + token_code
     def __init__(self):
-        self.OPERATIONS = ['+','-','*','/','%','**','=','==','>','>=','<','<=','<>','&','|','^','&','|','|','^','~','<<','>>','!','and','or','xor','pow','sqrt','sin','cos','tan','abs','log','log10','max','min']
+        self.OPERATIONS = ['$','.','+','-','*','/','%','**','=','==','>','>=','<','<=','<>','^','&','|','~','<<','>>','!','and','or','xor','pow','sqrt','sin','cos','tan','abs','log','log10','max','min']
         self.SERVICE_WORDS = ['if','else','else if','while','break','continue','function','return','echo','true','false','array','null','do']
-        self.SEPARATORS = [';','(',')',' ','.','\n','\t',"'",'"','<?','?>','$','{','}','#']
+        self.SEPARATORS = [';','(',')',' ','\n','\t',"'",'"','<?','?>','{','}','[',']','#']
         self.tokens = {'W':{},'I':{},'O':{},'R':{},'N':{},'C':{}}
     def process(self):
         for service_word in self.SERVICE_WORDS:
@@ -32,7 +32,7 @@ class LecAnalysis():
                 buffer=''
                 if symbol=='$':
                     state = 'q9'
-                    output_sequance+=self.tokens['R']['$']+' '
+                    output_sequance+=self.tokens['O']['$']+' '
                 elif symbol=='_':
                     state='q26'
                     buffer=symbol
@@ -154,6 +154,7 @@ class LecAnalysis():
                     self.createTokensCod('C',buffer)
                     output_sequance+=self.tokens['C'][buffer] + ' ' + self.tokens['R'][symbol] + ' '
                     state = 'S'
+            #НИКАКИХ ОБРАЩЕНИЙ К ЭЛЕМЕНТАМ МАССИВОВ В ЭТИХ СТРОКАХ и никаких множественных $
             elif state=='q10':
                 if symbol !='"' and symbol!="$":
                     state='q10'
@@ -164,7 +165,7 @@ class LecAnalysis():
                     state = 'S'
                 else:
                     self.createTokensCod('C', buffer)
-                    output_sequance += self.tokens['C'][buffer] + ' ' + self.tokens['R']['$'] + ' '
+                    output_sequance += self.tokens['C'][buffer] + ' ' + self.tokens['O']['.'] + ' ' + self.tokens['O']['$'] + ' '
                     state = 'q11'
                     buffer = ''
             elif state=='q11':
@@ -189,7 +190,7 @@ class LecAnalysis():
                         output_sequance+=self.tokens['O'][buffer]+' '
                     else:
                         self.createTokensCod('I',buffer)
-                        output_sequance+=self.tokens['I'][buffer]+' '
+                        output_sequance+=self.tokens['I'][buffer]+ ' ' + self.tokens['O']['.'] + ' '
                     state='q10'
                     buffer=''
                     i=i-1
@@ -204,7 +205,7 @@ class LecAnalysis():
                         output_sequance+=self.tokens['O'][buffer]+' '
                     else:
                         self.createTokensCod('I',buffer)
-                        output_sequance+=self.tokens['I'][buffer]+' '
+                        output_sequance+=self.tokens['I'][buffer]+' ' + self.tokens['O']['.'] + ' '
                     state='q10'
                     buffer = ''
                     i = i - 1
