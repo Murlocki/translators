@@ -16,6 +16,7 @@ class MainWindow(QMainWindow):
         uic.loadUi(os.path.join(os.path.dirname(__file__), '..\\ui\\main.ui'), self)
         self.controller = MainWindowController(self)
         self.startButton.clicked.connect(lambda :self.controller.start())
+        self.reverseButton.clicked.connect(lambda: self.controller.start_reverse())
         return self
     def show(self):
         super().show()

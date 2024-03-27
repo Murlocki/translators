@@ -1,21 +1,8 @@
 <?php
-$i[$_a]=1;
-"$$a"
-a or b;
-a and c
-$b = 1.453;
-while($i<10){
-	$a[1] = 2;
-	if($a==2 and $a>3 or $b>=-4){
-		$b=4;
-		$____12a;
-		#pepepepepepep
-		//e[ee[e[e[
-		/*eeeeeeeeeeeee*/
-		echo('efefefefefef');
-		echo("$_______a[2] $____12a");
-		pow(2,3);
-	}
-}
+do{
+    $a=$a+1;
+}while($a==0);
+
+
 ?>
 

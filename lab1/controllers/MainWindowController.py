@@ -21,3 +21,8 @@ class MainWindowController():
         self._window.input.setText(inp)
         f = open('./files/Output.txt','w')
         f.write(out)
+    def start_reverse(self):
+        out=self._model.reverse_polsk()
+        self._window.reverse_output.setText(out)
+        f = open('./files/reverse_polsk.txt', 'w')
+        f.write(out)
