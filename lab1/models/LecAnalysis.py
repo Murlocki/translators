@@ -35,7 +35,6 @@ class LecAnalysis():
         output_sequance = buffer = ''
         while i!=len(input_sequence):
             symbol = input_sequence[i]
-            print(symbol,state)
             if state == 'S':
                 buffer=''
                 if symbol=='$':
@@ -365,7 +364,6 @@ class LecAnalysis():
                 self.tokens.update(data)
         # лексемы (значение-код)
         inverse_tokens = {val: key for key, val in self.tokens.items()}
-        print(inverse_tokens)
         # файл, содержащий последовательность кодов лексем входной программы
         f = open('./files/Output.txt', 'r')
         inp_seq = f.read()
@@ -381,11 +379,15 @@ class LecAnalysis():
         out_seq = ''
         aem_count = 2
         proc_level = operand_count = 1
-        tag_count = proc_num = if_count = while_count = \
+        tag_count = proc_num = if_count = while_count = do_count= \
             begin_count = end_count = bracket_count = 0
         func_count = 1
-        is_if = is_while = is_description_var = False
+        is_if = is_while = is_do = is_description_var = False
         while i < len(t):
+            print(stack)
+            print(out_seq)
+            print(t[i])
+            print(do_count)
             p = self.get_priority(t[i])
             if p == -1:
                 if t[i]=='<?' and t[i+1]=='php':
@@ -430,7 +432,6 @@ class LecAnalysis():
                         stack.pop()
                         stack.append('2')
                         func_count = 1
-                    print(stack)
                     stack.pop()
                     bracket_count -= 1
                     if bracket_count == 0:
@@ -471,23 +472,29 @@ class LecAnalysis():
                     stack.append('if M' + str(tag_count))
                     out_seq += 'M' + str(tag_count) + ' БП M' + str(tag_count - 1) + ' : '
                 elif t[i] == 'while':
+                    if not is_do:
+                        tag_count += 1
+                        stack.append(t[i] + ' M' + str(tag_count))
+                        out_seq += 'M' + str(tag_count) + ' : '
+                        while_count += 1
+                        is_while = True
+                    bracket_count = 0
+                elif t[i] == 'do':
                     tag_count += 1
                     stack.append(t[i] + ' M' + str(tag_count))
                     out_seq += 'M' + str(tag_count) + ' : '
-                    while_count += 1
+                    do_count += 1
                     bracket_count = 0
-                    is_while = True
 
-
-                elif t[i] == 'sub':
+                elif t[i] == 'function':
                     proc_num += 1
-                    stack.append('PROC ' + str(proc_num) + ' ' + str(proc_level))
+                    stack.append('function ' + str(proc_num) + ' ' + str(proc_level))
                 elif t[i] == '{':
-                    if len(stack) > 0 and re.match(r'^PROC', stack[-1]):
+                    if len(stack) > 0 and re.match(r'^function', stack[-1]):
                         num = re.findall(r'\d+', stack[-1])
                         stack.pop()
                         out_seq += '0Ф ' + str(num[0]) + ' ' + str(num[1]) + ' НП '
-                        stack.append('PROC ' + str(proc_num) + ' ' + str(proc_level))
+                        stack.append('function ' + str(proc_num) + ' ' + str(proc_level))
                     begin_count += 1
                     proc_level = begin_count - end_count + 1
                     stack.append(t[i])
@@ -497,7 +504,7 @@ class LecAnalysis():
                     while stack[-1] != '{':
                         out_seq += stack.pop() + ' '
                     stack.pop()
-                    if len(stack) > 0 and re.match(r'^PROC', stack[-1]):
+                    if len(stack) > 0 and re.match(r'^function', stack[-1]):
                         stack.pop()
                         out_seq += 'КП '
                     if if_count > 0 and re.match(r'^if M\d+$', stack[-1]):
@@ -509,13 +516,15 @@ class LecAnalysis():
                             stack.pop()
                             out_seq += tag + ' : '
                             if_count -= 1
+                    if do_count > 0 and re.match(r'^do M\d+$', stack[-1]):
+                        is_do = True
                     if while_count > 0 and re.match(r'^while M\d+ M\d+$', stack[-1]):
                         tag = re.findall('M\d+', stack[-1])
                         stack.pop()
                         out_seq += tag[0] + ' БП ' + tag[1] + ' : '
                         while_count -= 1
                 elif t[i] == ';':
-                    if len(stack) > 0 and re.match(r'^PROC', stack[-1]):
+                    if len(stack) > 0 and re.match(r'^function', stack[-1]):
                         num = re.findall(r'\d+', stack[-1])
                         stack.pop()
                         out_seq += str(num[0]) + ' ' + str(num[1]) + ' НП '
@@ -528,10 +537,11 @@ class LecAnalysis():
                         out_seq += str(operand_count) + ' ' + proc_num + ' ' + proc_level + \
                                    ' КО '
                         is_description_var = False
-                    elif if_count > 0 or while_count > 0:
+                    elif if_count > 0 or while_count > 0 or do_count>0:
                         while not (len(stack) > 0 and stack[-1] == '{') and \
                                 not (if_count > 0 and re.match(r'^if M\d+$', stack[-1])) and \
-                                not (while_count > 0 and re.match(r'^while M\d+ M\d+$', stack[-1])):
+                                not (while_count > 0 and re.match(r'^while M\d+ M\d+$', stack[-1]))\
+                                and not (do_count > 0 and re.match(r'^do M\d+', stack[-1])):
                             out_seq += stack.pop() + ' '
                         if if_count > 0 and re.match(r'^if M\d+$', stack[-1]):
                             tag = re.search('M\d+', stack[-1]).group(0)
@@ -546,6 +556,13 @@ class LecAnalysis():
                             tag = re.findall('M\d+', stack[-1])
                             out_seq += tag[0] + ' БП ' + tag[1] + ' : '
                             while_count -= 1
+                        if do_count > 0 and re.match(r'^do M\d+', stack[-1]):
+                            tag = re.findall('M\d+', stack[-1])
+                            stack.pop()
+                            tag_count+=1
+                            out_seq += 'M'+str(tag_count) + ' УПЛ ' + tag[0] + ' БП ' + 'M'+str(tag_count) +' : '
+                            do_count -= 1
+                            is_do = False
                     else:
                         while len(stack) > 0 and stack[-1] != '{':
                             out_seq += stack.pop() + ' '
@@ -558,5 +575,6 @@ class LecAnalysis():
         while len(stack) > 0:
             out_seq += stack.pop() + ' '
         out_seq = re.sub(r'(\d)Ф', r'\1Ф', out_seq)
+        out_seq = out_seq.replace(' 0Ф','')
         print(out_seq)
         return ' '.join([inverse_tokens[symbol] if symbol in inverse_tokens.keys() else symbol for symbol in out_seq.split(' ')])

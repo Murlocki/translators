@@ -1,8 +1,20 @@
 <?php
-do{
-    $a=$a+1;
-}while($a==0);
-
-
+function f($x,$y){
+    $a=1;
+    function ar(){
+        $r=1;
+    }
+    return a;
+}
+function f($x,$y){
+    $a=1;
+}
+if($b<0){
+    f(1,2);
+    $a=array(1,2,3);
+    echo($a[0].$a[1]);
+}
+else{
+    echo(sqrt($x));
+}
 ?>
-
