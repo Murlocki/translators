@@ -1,10 +1,18 @@
 <?php
+$a[0][$i+1]=1;
+f(x,y);
+a=sqrt(x,y);
+
+$b="aaaaaaaa";
+echo("aaaaaa".$b);
+$a=sqrt($b+1);
+$a+$q;
 function f($x,$y){
     $a=1;
     function ar(){
         $r=1;
     }
-    return a;
+    return $a;
 }
 function f($x,$y){
     $a=1;
@@ -15,6 +23,6 @@ if($b<0){
     echo($a[0].$a[1]);
 }
 else{
-    echo(sqrt($x));
+    echo(sqrt($x).'effeefefffe'.'eeeeerrrr');
 }
 ?>

@@ -15,6 +15,8 @@ class LecAnalysis():
         self.SERVICE_WORDS = ['if','else','while','break','continue','function','return','echo','true','false','null','do']
         self.SEPARATORS = [',',';','(',')',' ','\n','\t',"'",'"','<?','?>','{','}','[',']','#']
         self.tokens = {'W':{},'I':{},'O':{},'R':{},'N':{},'C':{}}
+
+    #Лаба 1
     def process(self):
         self.tokens = {'W': {}, 'I': {}, 'O': {}, 'R': {}, 'N': {}, 'C': {}}
         for service_word in self.SERVICE_WORDS:
@@ -25,7 +27,7 @@ class LecAnalysis():
                 self.createTokensCod('R', separator)
         for operation in self.CREATED_FUNC:
             self.createTokensCod('I',operation)
-        f = open('./files/Input.txt','r')
+        f = open('files/Input.txt','r')
         input_sequence = f.read()
         f.close()
 
@@ -316,8 +318,7 @@ class LecAnalysis():
                 json.dump(data, write_file, indent=4, ensure_ascii=False)
         return output_sequance,input_sequence
 
-    # self.SERVICE_WORDS = [ 'break', 'continue',
-
+    #Лаба 2
     def get_priority(self,token):
         if token in ['(', 'if', 'while', '[', 'АЭМ', 'Ф', '{']:
             return 0
@@ -349,8 +350,6 @@ class LecAnalysis():
                      ]:
             return 12
         return -1
-
-
     def reverse_polsk(self):
         CLASSES_OF_TOKENS = ['W', 'I', 'O', 'R', 'N', 'C']
 
@@ -382,12 +381,14 @@ class LecAnalysis():
         tag_count = proc_num = if_count = while_count = do_count= \
             begin_count = end_count = bracket_count = 0
         func_count = 1
-        is_if = is_while = is_do = is_description_var = False
+        is_if = is_while = is_do = is_description_var =False
+        is_return = []
+
         while i < len(t):
-            print(stack)
-            print(out_seq)
-            print(t[i])
-            print(do_count)
+            # print(out_seq)
+            # print(stack)
+            # print(t[i])
+            # print('------')
             p = self.get_priority(t[i])
             if p == -1:
                 if t[i]=='<?' and t[i+1]=='php':
@@ -425,7 +426,11 @@ class LecAnalysis():
                         out_seq += stack.pop() + ' '
                     if re.match(r'^\d+Ф$', stack[-1]):
                         f_c=int(stack[-1].split('Ф')[0])
-                        stack.append(str(f_c+1) + 'Ф')
+                        if(t[i-1]!='('):
+                            stack.append(str(f_c+1) + 'Ф')
+                        else:
+
+                            stack.append(str(f_c) + 'Ф')
                         out_seq += stack.pop() + ' '
                         while len(stack) > 0 and stack[-1] != "1Ф":
                             stack.pop()
@@ -489,6 +494,8 @@ class LecAnalysis():
                 elif t[i] == 'function':
                     proc_num += 1
                     stack.append('function ' + str(proc_num) + ' ' + str(proc_level))
+                elif t[i]=='return':
+                   is_return.append('true')
                 elif t[i] == '{':
                     if len(stack) > 0 and re.match(r'^function', stack[-1]):
                         num = re.findall(r'\d+', stack[-1])
@@ -506,7 +513,11 @@ class LecAnalysis():
                     stack.pop()
                     if len(stack) > 0 and re.match(r'^function', stack[-1]):
                         stack.pop()
-                        out_seq += 'КП '
+                        if is_return:
+                            out_seq += 'return КП '
+                            is_return.pop()
+                        else:
+                            out_seq += 'КП '
                     if if_count > 0 and re.match(r'^if M\d+$', stack[-1]):
                         tag = re.search('M\d+', stack[-1]).group(0)
                         j = i + 1
@@ -578,3 +589,188 @@ class LecAnalysis():
         out_seq = out_seq.replace(' 0Ф','')
         print(out_seq)
         return ' '.join([inverse_tokens[symbol] if symbol in inverse_tokens.keys() else symbol for symbol in out_seq.split(' ')])
+
+
+    #Лаба 3
+
+    def translate_to_R(self):
+        CLASSES_OF_TOKENS = ['W', 'I', 'O', 'R', 'N', 'C']
+        self.tokens = {}
+        # файлы, содержащие все таблицы лексем
+        for token_class in CLASSES_OF_TOKENS:
+            with open('./files/%s.json' % token_class, 'r') as read_file:
+                data = json.load(read_file)
+                self.tokens.update(data)
+                if token_class == 'C':
+                    for k in data.keys():
+                        data[k] = re.sub(r"'([^']*)'", r'"\1"', data[k])
+                self.tokens.update(data)
+        # лексемы (значение-код)
+        inverse_tokens = {val: key for key, val in self.tokens.items()}
+        replace = {'echo': 'print', '=': '<-', '!=': '!=',
+                   '==': '==', '/': '/', '%': '%%','>':'>','>=':'>=','<':'<','<=':'<=',
+                   '$':'','.':'paste(','+':'+','-':'-','*':'*','**':'**',
+                    '^':'bitwXor(','&':'bitwAnd(','|':'bitwOr(','~':'bitwNot(','<<':'bitwShiftL(','>>':'bitwShiftR(',
+                   'and':'&&','or':'||','xor':'xor(','!': '!',
+                   'true':'TRUE','false':'FALSE','null':'NULL',
+                   'do':'repeat','array':'c'
+        }
+        # файл, содержащий обратную польскую запись
+        f = open('./files/reverse_polsk.txt', 'r')
+        inp_seq = f.read()
+        f.close()
+
+        t = re.findall(r'(?:\'[^\']*\')|(?:"[^"]*")|(?:[^ ]+)', inp_seq)
+
+        def is_identifier(token):
+            return ((token in inverse_tokens) and re.match(r'^I\d+$', inverse_tokens[token])) or re.match(r'^M\d+$',
+                                                                                                          token)
+
+        def is_constant(token):
+            return ((token in inverse_tokens) and re.match(r'^C\d+$', inverse_tokens[token])) or (
+                        (token in inverse_tokens) and re.match(r'^N\d+$',inverse_tokens[token]))
+
+        def is_operation(token):
+            return (token in inverse_tokens) and re.match(r'^O\d+$', inverse_tokens[token])
+
+        i = 0
+        stack = []
+        out_seq = ''
+        is_func = False
+        variable = 0
+
+        t=[self.tokens[i] if i in self.tokens.keys() else i for i in t]
+        tub_num=0
+        markers = []
+
+        while i < len(t):
+            print(out_seq)
+            print(stack)
+            print(markers)
+            print(t[i])
+            print('-------')
+            if is_func == True and not (is_identifier(t[i])):
+                out_seq += '{\n'
+                is_func = False
+            if is_identifier(t[i]) or is_constant(t[i]):
+                if t[i] in inverse_tokens and re.match(r'^C\d+$', inverse_tokens[t[i]]):
+                    stack.append(f'"{t[i]}"')
+                else:
+                    stack.append(replace[t[i]] if t[i] in replace else t[i])
+            elif t[i] == 'НП':
+                stack.pop()
+                stack.pop()
+                func_name = stack.pop()
+                out_seq += '\t'*tub_num + func_name.split('(')[0]+'=function('+func_name.split('(')[1]
+                tub_num = tub_num + 1
+                is_func = True
+            elif t[i] == 'КП':
+                tub_num-=1
+                out_seq += '\t'*tub_num+ '}\n'
+            elif t[i]=='return':
+                result = stack.pop()
+                out_seq+='\t'*tub_num+'return('+result+');\n'
+            elif t[i] == 'УПЛ':
+                arg1 = stack.pop()
+                arg2 = stack.pop()
+                out_seq += f'if (!({arg2})) goto {arg1};\n'
+                tub_num+=1
+            elif t[i] == 'БП':
+                arg1 = stack.pop()
+                out_seq += f'goto {arg1};\n'
+                tub_num-=1
+            elif t[i] == ':':
+                arg1 = stack.pop()
+                out_seq += f'{arg1}: '
+            elif t[i]=='echo':
+                arg1=stack.pop()
+                out_seq+='\t'*tub_num+f'print({arg1});\n'
+            elif is_operation(t[i]):
+                if t[i]=='$':
+                    out_seq = out_seq
+                elif t[i]=='.' and len(stack)>=2:
+                    arg1=stack.pop()
+                    arg2=stack.pop()
+                    out_seq += '\t'*tub_num+f'Rp{variable}='+f'paste({arg2},{arg1},sep="");\n'
+                    stack.append(f'Rp{variable}')
+                    variable+=1
+                elif t[i] == '=' and len(stack) >= 2:
+                    arg1 = stack.pop()
+                    arg2 = stack.pop()
+                    out_seq += '\t'*tub_num+ f'{arg2} <- {arg1};\n'
+                else:
+                    operation = replace[t[i]] if t[i] in replace else t[i]
+                    arg1 = stack.pop()
+                    if t[i] != '!':
+                        arg2 = stack.pop()
+                        out_seq+=f'Rp{variable}='+f'({arg2} {operation} {arg1});\n'
+                        stack.append(f'Rp{variable}')
+                        variable+=1
+                    else:
+                        stack.append(f'({operation}{arg1})')
+            elif re.match("[0-9]+АЭМ",t[i]):
+                k = int(t[i].split('АЭМ')[0])
+                a = []
+                while k != 0:
+                    a.append(stack.pop())
+                    k -= 1
+                a.reverse()
+                stack.append('\t'*tub_num + a[0] + '[' + ','.join(a[1:]) + ']')
+            elif t[i] in ['break', 'continue']:
+                stack.append(replace[t[i]] if t[i] in replace else t[i])
+                arg0 = stack.pop();
+                out_seq += '\t'*tub_num + f'\t{arg0};\n'
+
+            elif re.match(r"[0-9]+Ф",t[i]):
+                k = int(t[i].split('Ф')[0])
+                a = []
+                while k != 0:
+                    a.append(stack.pop())
+                    k -= 1
+                a.reverse()
+                out_seq+='\t'*tub_num+f"Rp{variable}="+a[0]+'(' + ', '.join(a[1:]) + ');\n'
+                stack.append(f"Rp{variable}({', '.join(a[1:])})")
+                variable+=1
+            i += 1
+
+        # # while
+        # out_seq = re.sub(r'(M\d+): if \(!\((.*)\)\) goto (M\d+);(?:\n|\n((?:.|\n)+)\n)goto \1;\n\3: ',
+        #                  r'while \2 {\n\4\n}\n', out_seq)
+        #
+        # if else
+        out_seq = re.sub(r'if\s*\((.*)\s*<\s*(.*)\)\s*{\s*(.*?)\s*}\s*else\s*{\s*(.*?)\s*}\s*',
+                         r'if (\1 < \2)\n{\n\3\n}\nelse\n{\n\4\n}\n', out_seq)
+
+        # # if
+        # out_seq = re.sub(r"if\s*\(\s*!\s*\(\s*(.*)\s*\)\s*\)\s*goto\s+(M\d+)\s*;\s*(\n(?:.|\n)+?)\s*\2:\s*",
+        #                  r"if \1 {\3\n}\n", out_seq)
+        #
+        # out_seq = re.sub(r"goto M(\d);", r"else {", out_seq)
+        # out_seq = re.sub(r"M(\d): ", r"", out_seq)
+
+        def indent_cpp_code(code):
+            indented_code = ""
+            indentation = 0
+            for line in code.split("\n"):
+                if "{" in line:
+                    indented_code += ("\t" * indentation) + line + "\n"
+                    indentation += 1
+                elif "}" in line:
+                    indentation -= 1
+                    indented_code += ("\t" * indentation) + line + "\n"
+                else:
+                    indented_code += ("\t" * indentation) + line + "\n"
+            return indented_code
+
+        out_seq = indent_cpp_code(out_seq)
+        out_seq = out_seq.replace("+= 1", "++")
+
+        out_seq = out_seq.replace("isPrime {", "(isPrime) {");
+
+        stack.clear()
+
+        # файл, содержащий текст на выходном языке программирования
+        f = open('c++.txt', 'w')
+        f.write(out_seq)
+        f.close()
+
