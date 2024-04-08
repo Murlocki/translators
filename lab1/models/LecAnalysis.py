@@ -35,8 +35,27 @@ class LecAnalysis():
         i=0
         state = 'S'
         output_sequance = buffer = ''
+
+        add_return_counter=0
+        bracers_func_stack=[]
+        func_buff=''
         while i!=len(input_sequence):
             symbol = input_sequence[i]
+            if (buffer == 'function' and func_buff!='function'):
+                add_return_counter += 1
+                func_buff='function'
+            elif (add_return_counter > 0 and buffer == 'return'):
+                add_return_counter -= 1
+            elif (symbol == '{'):
+                bracers_func_stack.append('{')
+            elif (symbol == '}'):
+                bracers_func_stack.pop()
+                if (add_return_counter > 0 and not bracers_func_stack):
+                    add_return_counter -= 1
+                    self.createTokensCod('C','')
+                    output_sequance += self.tokens['W']['return'] + ' '+ self.tokens['C']['']+ self.tokens['R'][';']
+            if(buffer!='function'):
+                func_buff=''
             if state == 'S':
                 buffer=''
                 if symbol=='$':
@@ -610,7 +629,6 @@ class LecAnalysis():
 
 
     #Лаба 3
-
     def translate_to_R(self):
         CLASSES_OF_TOKENS = ['W', 'I', 'O', 'R', 'N', 'C']
         self.tokens = {}
@@ -660,18 +678,18 @@ class LecAnalysis():
         tub_num=0
         markers = []
 
-        print(self.else_marks)
-        print(self.if_marks)
-        print(self.while_start_marks)
-        print(self.while_end_marks)
-        print(self.do_start_marks)
-        print(self.do_end_marks)
+        # print(self.else_marks)
+        # print(self.if_marks)
+        # print(self.while_start_marks)
+        # print(self.while_end_marks)
+        # print(self.do_start_marks)
+        # print(self.do_end_marks)
         while i < len(t):
-            print(out_seq)
-            print(stack)
-            print(markers)
-            print(t[i])
-            print('-------')
+            # print(out_seq)
+            # print(stack)
+            # print(markers)
+            # print(t[i])
+            # print('-------')
             if is_func == True and not (is_identifier(t[i])):
                 out_seq += '{\n'
                 is_func = False
@@ -706,8 +724,6 @@ class LecAnalysis():
                     arg1 = stack.pop()
                     out_seq += '\t'*tub_num+f'if ({arg1})' + '{break;}\n}\n'
                     tub_num -= 1
-            elif re.match(r'^M\d+$',t[i]):
-                print('')
             elif t[i] == 'БП':
                 if (t[i - 1] in self.while_start_marks):
                     out_seq += '\t'*tub_num+'}\n'
@@ -785,4 +801,152 @@ class LecAnalysis():
         f.write(out_seq)
         f.close()
         return out_seq
+
+    #Лаба 4
+    def error(self):
+        out_sq = 'Ошибка в строке '
+        f = open('./files/error.txt', 'w')
+        out_sq += str(self.row_counter)
+        f.write(out_sq)
+        f.close()
+        # print('Ошибка в строке', self.row_counter)
+        return
+    def program(self):
+        self.scan()
+        if(self.nxtsymb!='<?'):
+            self.error()
+        self.scan()
+        if(self.nxtsymb!='php'):
+            self.error()
+        self.scan()
+        self.text()
+        if(self.nxtsymb!='?>'):
+            self.error()
+
+
+    def text(self):
+
+        self.no_end_op_error = ['-','+','/','*','**',')',']','.','==','<=','>=','<','>'
+                                ',','<>','!=','%',';','^','&','|','<<','>>','and','or','xor']
+
+        while(self.nxtsymb!='?>'):
+            if(self.nxtsymb=='function'):
+                self.procedure()
+            elif self.identifier():
+                self.scan()
+                if self.nxtsymb=='(':
+                    self.list_of_names()
+                    if self.nxtsymb!=')':
+                        self.error()
+                    self.scan()
+                    if self.nxtsymb not in self.no_end_op_error:
+                        self.error()
+                    self.scan()
+                    self.row_counter+=1
+            elif self.nxtsymb =='return':
+                self.scan()
+                self.expression()
+            elif self.nxtsymb=='{':
+                self.compound_operator()
+            elif self.nxtsymb==';':
+                self.row_counter+=1
+                self.scan()
+            else:
+                self.line()
+    #Сканирование следующего символа
+    def scan(self):
+        self.i+=1
+        if(self.i>len(self.match)):
+            if self.nxtsymb not in ['\n',';','}']:
+                self.error()
+        else:
+            for token_class in self.tokens.keys():
+                if self.match[self.i] in self.tokens[token_class]:
+                    self.nxtsymb = self.tokens[token_class][self.match[self.i]]
+            if self.nxtsymb=='\n':
+                self.row_counter+=1
+                self.scan()
+        self.printer()
+    #Сканирование функций-процедуры
+    def procedure(self):
+        #Сканируем название
+        self.scan()
+        if not self.identifier():
+            self.error()
+        self.scan()
+        #Сканируем аргументы
+        if self.nxtsymb!='(':
+            self.error()
+        self.list_of_names(type_read=1)
+        if self.nxtsymb!=')':
+            self.error()
+        self.scan()
+        self.compound_operator()
+
+    #Считываем список аргументов
+    def check_is_agrument(self,type_read=0):
+        if(self.nxtsymb=='$'):
+            self.scan()
+            if not self.identifier():
+                self.error()
+        elif type_read==1:
+            self.error()
+        else:
+            if not(self.constant() or self.number_const()):
+                self.error()
+    def list_of_names(self,type_read=0):
+        self.scan()
+        self.check_is_agrument(type_read)
+        self.printer()
+        self.scan()
+        while(self.nxtsymb==','):
+            self.scan()
+            self.check_is_agrument(type_read)
+            self.scan()
+    #Проверка идентификатора
+    def identifier(self):
+        return self.nxtsymb in self.tokens['I'].values()
+    #Проверка константы
+    def constant(self):
+        return  self.nxtsymb in self.tokens['C'].values()
+    def number_const(self):
+        return self.nxtsymb in self.tokens['N'].values()
+    #Сканирование блока {}
+    def compound_operator(self):
+        if self.nxtsymb != '{':
+            self.error()
+        self.scan()
+        self.text()
+        if self.nxtsymb != '}':
+            self.error()
+        self.scan()
+
+    def analyzer(self):
+        self.i = -1
+        self.nxtsymb = None  # разбираемый символ
+        self.row_counter = 1  # счётчик строк
+
+        # лексемы
+        self.tokens = {'W': {}, 'I': {}, 'O': {}, 'R': {}, 'N': {}, 'C': {}}
+
+        # файлы, содержащие все таблицы лексем
+        for token_class in self.tokens.keys():
+            with open('./files/%s.json' % token_class, 'r') as read_file:
+                data = json.load(read_file)
+                self.tokens[token_class] = data
+
+        # файл, содержащий последовательность кодов лексем входной программы
+        f = open('./files/Output.txt', 'r')
+        input_sequence = f.read()
+        f.close()
+
+        regexp = '[' + '|'.join(self.tokens.keys()) + ']' + '\d+'
+        self.match = re.findall(regexp, input_sequence)
+        print(self.tokens)
+        print(self.match)
+
+        self.program()
+
+    def printer(self):
+        print(self.nxtsymb,self.i,self.row_counter)
 

@@ -1,4 +1,9 @@
 <?php
+ar($a,$b,"ccccc");
+function ar($a,$b,$c){
+    }
+
+
 do{
     $a=1;
 }while($a>0);
@@ -33,6 +38,7 @@ function f($x,$y){
     $a=1;
     function ar(){
         $r=1;
+        return $e;
     }
     return $a;
 }
