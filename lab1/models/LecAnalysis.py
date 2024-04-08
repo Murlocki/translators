@@ -384,11 +384,24 @@ class LecAnalysis():
         is_if = is_while = is_do = is_description_var =False
         is_return = []
 
+
+        self.if_marks=[]
+        self.else_marks=[]
+
+        self.while_start_marks=[]
+        self.while_end_marks=[]
+
+        self.do_start_marks=[]
+        self.do_end_marks=[]
         while i < len(t):
             # print(out_seq)
             # print(stack)
             # print(t[i])
             # print('------')
+            # print(self.if_marks)
+            # print(self.else_marks)
+            # print(self.while_start_marks)
+            # print(self.while_end_marks)
             p = self.get_priority(t[i])
             if p == -1:
                 if t[i]=='<?' and t[i+1]=='php':
@@ -447,6 +460,7 @@ class LecAnalysis():
                             stack[-1] += ' M' + str(tag_count)
                             out_seq += 'M' + str(tag_count) + ' УПЛ '
                             is_if = False
+                            self.else_marks.append('M' + str(tag_count))
                         if is_while:
                             while not (re.match(r'^while M\d+$', stack[-1])):
                                 out_seq += stack.pop() + ' '
@@ -476,11 +490,13 @@ class LecAnalysis():
                     tag_count += 1
                     stack.append('if M' + str(tag_count))
                     out_seq += 'M' + str(tag_count) + ' БП M' + str(tag_count - 1) + ' : '
+                    self.if_marks.append('M' + str(tag_count))
                 elif t[i] == 'while':
                     if not is_do:
                         tag_count += 1
                         stack.append(t[i] + ' M' + str(tag_count))
                         out_seq += 'M' + str(tag_count) + ' : '
+                        self.while_start_marks.append('M' + str(tag_count))
                         while_count += 1
                         is_while = True
                     bracket_count = 0
@@ -488,6 +504,7 @@ class LecAnalysis():
                     tag_count += 1
                     stack.append(t[i] + ' M' + str(tag_count))
                     out_seq += 'M' + str(tag_count) + ' : '
+                    self.do_start_marks.append('M' + str(tag_count))
                     do_count += 1
                     bracket_count = 0
 
@@ -534,6 +551,7 @@ class LecAnalysis():
                         stack.pop()
                         out_seq += tag[0] + ' БП ' + tag[1] + ' : '
                         while_count -= 1
+                        self.while_end_marks.append(tag[1])
                 elif t[i] == ';':
                     if len(stack) > 0 and re.match(r'^function', stack[-1]):
                         num = re.findall(r'\d+', stack[-1])
@@ -623,8 +641,7 @@ class LecAnalysis():
         t = re.findall(r'(?:\'[^\']*\')|(?:"[^"]*")|(?:[^ ]+)', inp_seq)
 
         def is_identifier(token):
-            return ((token in inverse_tokens) and re.match(r'^I\d+$', inverse_tokens[token])) or re.match(r'^M\d+$',
-                                                                                                          token)
+            return ((token in inverse_tokens) and re.match(r'^I\d+$', inverse_tokens[token]))
 
         def is_constant(token):
             return ((token in inverse_tokens) and re.match(r'^C\d+$', inverse_tokens[token])) or (
@@ -643,6 +660,12 @@ class LecAnalysis():
         tub_num=0
         markers = []
 
+        print(self.else_marks)
+        print(self.if_marks)
+        print(self.while_start_marks)
+        print(self.while_end_marks)
+        print(self.do_start_marks)
+        print(self.do_end_marks)
         while i < len(t):
             print(out_seq)
             print(stack)
@@ -671,17 +694,34 @@ class LecAnalysis():
                 result = stack.pop()
                 out_seq+='\t'*tub_num+'return('+result+');\n'
             elif t[i] == 'УПЛ':
-                arg1 = stack.pop()
-                arg2 = stack.pop()
-                out_seq += f'if (!({arg2})) goto {arg1};\n'
-                tub_num+=1
+                if(t[i-1] in self.while_end_marks):
+                    arg1 = stack.pop()
+                    out_seq += '\t'*tub_num+f'while({arg1})' + '{\n'
+                    tub_num += 1
+                elif(t[i-1] in self.else_marks):
+                    arg1 = stack.pop()
+                    out_seq += '\t'*tub_num+f'if ({arg1})' + '{\n'
+                    tub_num += 1
+                elif (t[i + 1] in self.do_start_marks):
+                    arg1 = stack.pop()
+                    out_seq += '\t'*tub_num+f'if ({arg1})' + '{break;}\n}\n'
+                    tub_num -= 1
+            elif re.match(r'^M\d+$',t[i]):
+                print('')
             elif t[i] == 'БП':
-                arg1 = stack.pop()
-                out_seq += f'goto {arg1};\n'
-                tub_num-=1
+                if (t[i - 1] in self.while_start_marks):
+                    out_seq += '\t'*tub_num+'}\n'
+                    tub_num -= 1
+                elif (t[i - 1] in self.if_marks):
+                    out_seq += '\t'*tub_num+'}\nelse{\n'
+                    out_seq = out_seq
             elif t[i] == ':':
-                arg1 = stack.pop()
-                out_seq += f'{arg1}: '
+                if(t[i-1] in self.else_marks):
+                    out_seq+='\t'*tub_num+'}\n'
+                    tub_num-=1
+                elif(t[i-1] in self.do_start_marks):
+                    out_seq+='\t'*tub_num+'repeat{\n'
+                    tub_num+=1
             elif t[i]=='echo':
                 arg1=stack.pop()
                 out_seq+='\t'*tub_num+f'print({arg1});\n'
@@ -703,7 +743,7 @@ class LecAnalysis():
                     arg1 = stack.pop()
                     if t[i] != '!':
                         arg2 = stack.pop()
-                        out_seq+=f'Rp{variable}='+f'({arg2} {operation} {arg1});\n'
+                        out_seq+='\t'*tub_num+f'Rp{variable}='+f'({arg2} {operation} {arg1});\n'
                         stack.append(f'Rp{variable}')
                         variable+=1
                     else:
@@ -718,7 +758,7 @@ class LecAnalysis():
                 stack.append('\t'*tub_num + a[0] + '[' + ','.join(a[1:]) + ']')
             elif t[i] in ['break', 'continue']:
                 stack.append(replace[t[i]] if t[i] in replace else t[i])
-                arg0 = stack.pop();
+                arg0 = stack.pop()
                 out_seq += '\t'*tub_num + f'\t{arg0};\n'
 
             elif re.match(r"[0-9]+Ф",t[i]):
@@ -728,44 +768,15 @@ class LecAnalysis():
                     a.append(stack.pop())
                     k -= 1
                 a.reverse()
-                out_seq+='\t'*tub_num+f"Rp{variable}="+a[0]+'(' + ', '.join(a[1:]) + ');\n'
-                stack.append(f"Rp{variable}({', '.join(a[1:])})")
-                variable+=1
-            i += 1
-
-        # # while
-        # out_seq = re.sub(r'(M\d+): if \(!\((.*)\)\) goto (M\d+);(?:\n|\n((?:.|\n)+)\n)goto \1;\n\3: ',
-        #                  r'while \2 {\n\4\n}\n', out_seq)
-        #
-        # if else
-        out_seq = re.sub(r'if\s*\((.*)\s*<\s*(.*)\)\s*{\s*(.*?)\s*}\s*else\s*{\s*(.*?)\s*}\s*',
-                         r'if (\1 < \2)\n{\n\3\n}\nelse\n{\n\4\n}\n', out_seq)
-
-        # # if
-        # out_seq = re.sub(r"if\s*\(\s*!\s*\(\s*(.*)\s*\)\s*\)\s*goto\s+(M\d+)\s*;\s*(\n(?:.|\n)+?)\s*\2:\s*",
-        #                  r"if \1 {\3\n}\n", out_seq)
-        #
-        # out_seq = re.sub(r"goto M(\d);", r"else {", out_seq)
-        # out_seq = re.sub(r"M(\d): ", r"", out_seq)
-
-        def indent_cpp_code(code):
-            indented_code = ""
-            indentation = 0
-            for line in code.split("\n"):
-                if "{" in line:
-                    indented_code += ("\t" * indentation) + line + "\n"
-                    indentation += 1
-                elif "}" in line:
-                    indentation -= 1
-                    indented_code += ("\t" * indentation) + line + "\n"
+                if(i<len(t)-3 and t[i+3]!='НП'):
+                    out_seq+='\t'*tub_num+f"Rp{variable}="+a[0]+'(' + ', '.join(a[1:]) + ');\n'
+                    stack.append(f"Rp{variable}")
+                    variable+=1
                 else:
-                    indented_code += ("\t" * indentation) + line + "\n"
-            return indented_code
-
-        out_seq = indent_cpp_code(out_seq)
-        out_seq = out_seq.replace("+= 1", "++")
-
-        out_seq = out_seq.replace("isPrime {", "(isPrime) {");
+                    stack.append(a[0]+'(' + ', '.join(a[1:]) + ')')
+            else:
+                stack.append(t[i])
+            i += 1
 
         stack.clear()
 
@@ -773,4 +784,5 @@ class LecAnalysis():
         f = open('c++.txt', 'w')
         f.write(out_seq)
         f.close()
+        return out_seq
 
