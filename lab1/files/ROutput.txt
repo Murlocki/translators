@@ -1,0 +1,17 @@
+b <- "aaaaaaaa";
+Rp0=paste("aaaaaa",b,sep="");
+print(Rp0);
+f=function(x, y){
+	a <- 1;
+	ar=function(){
+		r <- 1;
+		return(e);
+	}
+	return(a);
+}
+f=function(x, y){
+	a <- 1;
+	return(a);
+}
+Rp1=(a + 1);
+a <- Rp1;

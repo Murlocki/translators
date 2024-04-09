@@ -21,8 +21,22 @@ class MainWindowController():
         self._window.input.setText(inp)
         f = open('./files/Output.txt','w')
         f.write(out)
+        f.close()
     def start_reverse(self):
         out=self._model.reverse_polsk()
         self._window.reverse_output.setText(out)
         f = open('./files/reverse_polsk.txt', 'w')
         f.write(out)
+        f.close()
+    def start_r_translate(self):
+        out=self._model.translate_to_R()
+        self._window.traslateR_output.setText(out)
+        f = open('./files/ROutput.txt','w')
+        f.write(out)
+        f.close()
+    def start_synt(self):
+        out=self._model.analyzer()
+        f = open('./files/error.txt', 'r')
+        out=f.read()
+        f.close()
+        self._window.errors_output.setText(out)

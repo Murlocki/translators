@@ -100,6 +100,10 @@ class LecAnalysis():
                 if symbol.isalpha():
                     state='q1'
                     buffer=buffer+symbol
+                elif symbol in self.tokens['R']:
+                    state='S'
+                    output_sequance+=' '+self.tokens['R'][symbol]
+                    buffer=''
             elif state == 'q1':
                 if symbol.isalpha() or symbol=='_':
                     buffer = buffer + symbol
@@ -406,6 +410,7 @@ class LecAnalysis():
 
         self.if_marks=[]
         self.else_marks=[]
+        self.end_marks=[]
 
         self.while_start_marks=[]
         self.while_end_marks=[]
@@ -480,6 +485,7 @@ class LecAnalysis():
                             out_seq += 'M' + str(tag_count) + ' УПЛ '
                             is_if = False
                             self.else_marks.append('M' + str(tag_count))
+                            self.end_marks.append('M' + str(tag_count))
                         if is_while:
                             while not (re.match(r'^while M\d+$', stack[-1])):
                                 out_seq += stack.pop() + ' '
@@ -510,6 +516,7 @@ class LecAnalysis():
                     stack.append('if M' + str(tag_count))
                     out_seq += 'M' + str(tag_count) + ' БП M' + str(tag_count - 1) + ' : '
                     self.if_marks.append('M' + str(tag_count))
+                    self.end_marks.pop()
                 elif t[i] == 'while':
                     if not is_do:
                         tag_count += 1
@@ -526,7 +533,6 @@ class LecAnalysis():
                     self.do_start_marks.append('M' + str(tag_count))
                     do_count += 1
                     bracket_count = 0
-
                 elif t[i] == 'function':
                     proc_num += 1
                     stack.append('function ' + str(proc_num) + ' ' + str(proc_level))
@@ -678,15 +684,15 @@ class LecAnalysis():
         tub_num=0
         markers = []
 
-        # print(self.else_marks)
-        # print(self.if_marks)
+        print(self.else_marks)
+        print(self.if_marks)
         # print(self.while_start_marks)
         # print(self.while_end_marks)
         # print(self.do_start_marks)
         # print(self.do_end_marks)
         while i < len(t):
             # print(out_seq)
-            # print(stack)
+            print(stack)
             # print(markers)
             # print(t[i])
             # print('-------')
@@ -717,6 +723,7 @@ class LecAnalysis():
                     out_seq += '\t'*tub_num+f'while({arg1})' + '{\n'
                     tub_num += 1
                 elif(t[i-1] in self.else_marks):
+                    stack.pop()
                     arg1 = stack.pop()
                     out_seq += '\t'*tub_num+f'if ({arg1})' + '{\n'
                     tub_num += 1
@@ -732,7 +739,10 @@ class LecAnalysis():
                     out_seq += '\t'*tub_num+'}\nelse{\n'
                     out_seq = out_seq
             elif t[i] == ':':
-                if(t[i-1] in self.else_marks):
+                if(t[i-1] in self.end_marks):
+                    out_seq += '\t' * tub_num + '}\n'
+                    tub_num -= 1
+                elif(t[i-1] in self.if_marks):
                     out_seq+='\t'*tub_num+'}\n'
                     tub_num-=1
                 elif(t[i-1] in self.do_start_marks):
@@ -795,21 +805,16 @@ class LecAnalysis():
             i += 1
 
         stack.clear()
-
-        # файл, содержащий текст на выходном языке программирования
-        f = open('c++.txt', 'w')
-        f.write(out_seq)
-        f.close()
         return out_seq
 
     #Лаба 4
     def error(self):
+        print(self.nxtsymb,self.row_counter,22222)
         out_sq = 'Ошибка в строке '
-        f = open('./files/error.txt', 'w')
+        f = open('./files/error.txt', 'a')
         out_sq += str(self.row_counter)
-        f.write(out_sq)
+        f.write(out_sq+'\n')
         f.close()
-        # print('Ошибка в строке', self.row_counter)
         return
     def program(self):
         self.scan()
@@ -828,31 +833,203 @@ class LecAnalysis():
 
         self.no_end_op_error = ['-','+','/','*','**',')',']','.','==','<=','>=','<','>'
                                 ',','<>','!=','%',';','^','&','|','<<','>>','and','or','xor']
-
         while(self.nxtsymb!='?>'):
             if(self.nxtsymb=='function'):
                 self.procedure()
-            elif self.identifier():
+            elif self.identifier() or self.nxtsymb=='echo':
                 self.scan()
-                if self.nxtsymb=='(':
-                    self.list_of_names()
-                    if self.nxtsymb!=')':
+                if self.nxtsymb == '(':
+                    self.brackets.append('(')
+                    self.scan()
+                    if self.nxtsymb != ')':
+                        self.expression()
+                        while self.nxtsymb == ',':
+                            self.scan()
+                            self.expression()
+                        if self.nxtsymb != ')':
+                            self.error()
+                    if len(self.brackets)==0 or (self.brackets and self.brackets.pop() != '('):
                         self.error()
                     self.scan()
-                    if self.nxtsymb not in self.no_end_op_error:
-                        self.error()
+                elif self.nxtsymb == '=':
                     self.scan()
-                    self.row_counter+=1
-            elif self.nxtsymb =='return':
+                    self.expression()
+                    if self.nxtsymb != ';':
+                        self.row_counter-=1
+                        self.error()
+                        self.row_counter+=1
+            elif self.nxtsymb=='$':
+                self.scan()
+                if not self.identifier():
+                    self.error()
+            elif self.nxtsymb=='return':
                 self.scan()
                 self.expression()
+                if self.nxtsymb!=';':
+                    self.row_counter-=1
+                    self.error()
+                    self.row_counter+=1
+            elif self.nxtsymb == 'break':
+                self.break_operator()
+                self.scan()
+                if self.nxtsymb != ';': self.error()
+            elif self.nxtsymb == 'continue':
+                self.continue_operator()
+                self.scan()
+                if self.nxtsymb != ';': self.error()
+            elif self.nxtsymb=='if':
+                self.conditional_operator()
+            elif self.nxtsymb == 'while':
+                self.while_loop()
+            elif self.nxtsymb =='do':
+                self.do_loop()
             elif self.nxtsymb=='{':
                 self.compound_operator()
+            elif self.nxtsymb=='[':
+                self.scan()
+                self.brackets.append('[')
+                self.expression()
+                if self.nxtsymb!=']':
+                    self.error()
+                if len(self.brackets)==0 or (self.brackets and self.brackets.pop()!='['):
+                    self.error()
+                self.scan()
+                if self.nxtsymb == '=':
+                    self.scan()
+                    self.expression()
+                    if self.nxtsymb != ';': self.error()
             elif self.nxtsymb==';':
-                self.row_counter+=1
                 self.scan()
             else:
-                self.line()
+                break
+
+    # оператор break
+    def break_operator(self):
+        return self.nxtsymb == 'break'
+
+    # оператор continue
+    def continue_operator(self):
+        return self.nxtsymb == 'continue'
+    #Сканирование do-while
+    def do_loop(self):
+        if self.nxtsymb !='do': self.error()
+        self.scan()
+        self.compound_operator()
+        self.while_loop()
+
+    #Сканирование while
+    def while_loop(self):
+        if self.nxtsymb != 'while': self.error()
+        self.scan()
+        if self.nxtsymb != '(': self.error()
+        self.brackets.append('(')
+        self.condition()
+        if self.nxtsymb != ')': self.error()
+        if len(self.brackets)==0 or (self.brackets and self.brackets.pop()!='('):
+            self.error()
+        self.scan()
+    #Сканирование if
+    def conditional_operator(self):
+        if self.nxtsymb != 'if': self.error()
+        self.scan()
+        if self.nxtsymb != '(': self.error()
+        self.condition()
+        self.brackets.append('(')
+        if self.nxtsymb != ')': self.error()
+        if len(self.brackets)==0 or (self.brackets and self.brackets.pop() != '('):
+            self.error()
+        self.scan()
+        self.text()
+        if self.nxtsymb == 'else':
+            self.scan()
+            self.text()
+
+    # условие
+    def condition(self):
+        if self.unary_log_operation():
+            self.scan()
+            if self.nxtsymb != '(': self.error()
+            self.brackets.append('(')
+            self.log_expression()
+            if self.nxtsymb != ')': self.error()
+            if len(self.brackets)==0 or (self.brackets and self.brackets.pop() != '('):
+                self.error()
+            self.scan()
+        else:
+            self.log_expression()
+            while self.binary_log_operation():
+                self.log_expression()
+
+    # унарная логическая операция
+    def unary_log_operation(self):
+        return self.nxtsymb == '!'
+
+    # логическое выражение
+    def log_expression(self):
+        self.scan()
+        self.expression()
+        self.comparison_operation()
+        self.scan()
+        self.expression()
+
+    # операция сравнения
+    def comparison_operation(self):
+        return self.nxtsymb in ['!=', '<', '<=', '==', '>', '>=','<>']
+
+    # бинарная логическая операция
+    def binary_log_operation(self):
+        return self.nxtsymb == 'and' or self.nxtsymb == 'or' or self.nxtsymb=='xor'
+
+    #Сканирование выражения
+    def expression(self):
+        if self.nxtsymb == '(':
+            self.brackets.append('(')
+            self.scan()
+            self.expression()
+            if self.nxtsymb != ')': self.error()
+            if len(self.brackets)==0 or (self.brackets and self.brackets.pop()!='('):
+                self.error()
+            self.scan()
+        elif self.nxtsymb =='$':
+            self.scan()
+            if not self.identifier():
+                self.error()
+                self.scan()
+            self.expression()
+        elif self.identifier():
+            self.scan()
+            if self.nxtsymb == '(':
+                self.brackets.append('(')
+                self.scan()
+                if self.nxtsymb != ')':
+                    self.expression()
+                    while self.nxtsymb == ',':
+                        self.scan()
+                        self.expression()
+                    if self.nxtsymb != ')':
+                        self.error()
+                if len(self.brackets) == 0 or (self.brackets and self.brackets.pop() != '('):
+                    self.error()
+                self.scan()
+            elif self.nxtsymb == '[':
+                self.brackets.append('[')
+                self.scan()
+                self.expression()
+                if self.nxtsymb != ']': self.error()
+                if len(self.brackets) == 0 or (self.brackets and self.brackets.pop() != '['):
+                    self.error()
+                self.scan()
+        elif self.number_const() or self.constant():
+            self.scan()
+        else:
+            self.error()
+        if self.arithmetic_operation():
+            self.scan()
+            self.expression()
+
+    #Проверяем арифметическая ли операция
+    def arithmetic_operation(self):
+        return self.nxtsymb in ['%', '*','**', '+', '-', '/','.']
     #Сканирование следующего символа
     def scan(self):
         self.i+=1
@@ -863,10 +1040,12 @@ class LecAnalysis():
             for token_class in self.tokens.keys():
                 if self.match[self.i] in self.tokens[token_class]:
                     self.nxtsymb = self.tokens[token_class][self.match[self.i]]
+            self.printer()
             if self.nxtsymb=='\n':
-                self.row_counter+=1
+                if self.match[self.i-1] in self.tokens['R'].keys() and self.tokens['R'][self.match[self.i-1]] not in ['{','}', ';','\n'] and self.i!=2:
+                    self.error()
+                self.row_counter += 1
                 self.scan()
-        self.printer()
     #Сканирование функций-процедуры
     def procedure(self):
         #Сканируем название
@@ -877,11 +1056,22 @@ class LecAnalysis():
         #Сканируем аргументы
         if self.nxtsymb!='(':
             self.error()
-        self.list_of_names(type_read=1)
-        if self.nxtsymb!=')':
-            self.error()
+        self.brackets.append('(')
         self.scan()
-        self.compound_operator()
+        if self.nxtsymb!=')':
+            self.list_of_names(type_read=1)
+        if self.nxtsymb!=')':
+            print(self.nxtsymb,1)
+            self.error()
+        if len(self.brackets) == 0 or (self.brackets and self.brackets.pop() != '('):
+            print(self.brackets)
+            self.error()
+
+        self.scan()
+        if self.nxtsymb!='{':
+            self.error()
+        else:
+            self.compound_operator()
 
     #Считываем список аргументов
     def check_is_agrument(self,type_read=0):
@@ -895,7 +1085,6 @@ class LecAnalysis():
             if not(self.constant() or self.number_const()):
                 self.error()
     def list_of_names(self,type_read=0):
-        self.scan()
         self.check_is_agrument(type_read)
         self.printer()
         self.scan()
@@ -915,10 +1104,15 @@ class LecAnalysis():
     def compound_operator(self):
         if self.nxtsymb != '{':
             self.error()
+        self.brackets.append('{')
         self.scan()
         self.text()
         if self.nxtsymb != '}':
             self.error()
+        print(self.brackets)
+        if len(self.brackets) == 0 or (self.brackets and self.brackets.pop() != '{'):
+            self.error()
+
         self.scan()
 
     def analyzer(self):
@@ -944,7 +1138,9 @@ class LecAnalysis():
         self.match = re.findall(regexp, input_sequence)
         print(self.tokens)
         print(self.match)
-
+        f=open('./files/error.txt','w')
+        f.close()
+        self.brackets = []
         self.program()
 
     def printer(self):

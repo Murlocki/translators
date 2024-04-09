@@ -17,6 +17,8 @@ class MainWindow(QMainWindow):
         self.controller = MainWindowController(self)
         self.startButton.clicked.connect(lambda :self.controller.start())
         self.reverseButton.clicked.connect(lambda: self.controller.start_reverse())
+        self.translateRButton.clicked.connect(lambda : self.controller.start_r_translate())
+        self.syntButton.clicked.connect(lambda: self.controller.start_synt())
         return self
     def show(self):
         super().show()
