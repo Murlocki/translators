@@ -19,6 +19,12 @@ class MainWindow(QMainWindow):
         self.reverseButton.clicked.connect(lambda: self.controller.start_reverse())
         self.translateRButton.clicked.connect(lambda : self.controller.start_r_translate())
         self.syntButton.clicked.connect(lambda: self.controller.start_synt())
+
+        self.input.setReadOnly(True)
+        self.output.setReadOnly(True)
+        self.reverse_output.setReadOnly(True)
+        self.traslateR_output.setReadOnly(True)
+        self.errors_output.setReadOnly(True)
         return self
     def show(self):
         super().show()

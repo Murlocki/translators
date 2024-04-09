@@ -1029,7 +1029,7 @@ class LecAnalysis():
 
     #Проверяем арифметическая ли операция
     def arithmetic_operation(self):
-        return self.nxtsymb in ['%', '*','**', '+', '-', '/','.']
+        return self.nxtsymb in ['%', '*','**', '+', '-', '/','.','>>','>>','&','|','^']
     #Сканирование следующего символа
     def scan(self):
         self.i+=1
