@@ -418,10 +418,10 @@ class LecAnalysis():
         self.do_start_marks=[]
         self.do_end_marks=[]
         while i < len(t):
-            # print(out_seq)
-            # print(stack)
-            # print(t[i])
-            # print('------')
+            print(out_seq)
+            print(stack)
+            print(t[i])
+            print('------')
             # print(self.if_marks)
             # print(self.else_marks)
             # print(self.while_start_marks)
@@ -487,11 +487,10 @@ class LecAnalysis():
                             self.else_marks.append('M' + str(tag_count))
                             self.end_marks.append('M' + str(tag_count))
                         if is_while:
-                            while not (re.match(r'^while M\d+$', stack[-1])):
+                            while not (re.match(r'^while:if$', stack[-1])):
                                 out_seq += stack.pop() + ' '
-                            tag_count += 1
-                            out_seq += 'M' + str(tag_count) + ' УПЛ '
-                            stack[-1] += ' M' + str(tag_count)
+                            out_seq+=stack.pop()+' '
+                            stack.append('while:body')
                             is_while = False
                 elif t[i] == ',':
                     while not (re.match(r'^\d+АЭМ$', stack[-1])) and \
@@ -519,18 +518,15 @@ class LecAnalysis():
                     self.end_marks.pop()
                 elif t[i] == 'while':
                     if not is_do:
-                        tag_count += 1
-                        stack.append(t[i] + ' M' + str(tag_count))
-                        out_seq += 'M' + str(tag_count) + ' : '
-                        self.while_start_marks.append('M' + str(tag_count))
+                        stack.append('while:if')
                         while_count += 1
                         is_while = True
+                    else:
+                        stack.append('do:if')
                     bracket_count = 0
                 elif t[i] == 'do':
-                    tag_count += 1
-                    stack.append(t[i] + ' M' + str(tag_count))
-                    out_seq += 'M' + str(tag_count) + ' : '
-                    self.do_start_marks.append('M' + str(tag_count))
+                    stack.append('do:body')
+                    out_seq += 'do:st '
                     do_count += 1
                     bracket_count = 0
                 elif t[i] == 'function':
@@ -569,14 +565,14 @@ class LecAnalysis():
                             stack.pop()
                             out_seq += tag + ' : '
                             if_count -= 1
-                    if do_count > 0 and re.match(r'^do M\d+$', stack[-1]):
+                    if do_count > 0 and re.match(r'^do:body$', stack[-1]):
                         is_do = True
-                    if while_count > 0 and re.match(r'^while M\d+ M\d+$', stack[-1]):
-                        tag = re.findall('M\d+', stack[-1])
+                        out_seq+='do:body '
                         stack.pop()
-                        out_seq += tag[0] + ' БП ' + tag[1] + ' : '
+                    if while_count > 0 and re.match(r'^while:body', stack[-1]):
+                        stack.pop()
+                        out_seq += 'while:body '
                         while_count -= 1
-                        self.while_end_marks.append(tag[1])
                 elif t[i] == ';':
                     if len(stack) > 0 and re.match(r'^function', stack[-1]):
                         num = re.findall(r'\d+', stack[-1])
@@ -594,8 +590,8 @@ class LecAnalysis():
                     elif if_count > 0 or while_count > 0 or do_count>0:
                         while not (len(stack) > 0 and stack[-1] == '{') and \
                                 not (if_count > 0 and re.match(r'^if M\d+$', stack[-1])) and \
-                                not (while_count > 0 and re.match(r'^while M\d+ M\d+$', stack[-1]))\
-                                and not (do_count > 0 and re.match(r'^do M\d+', stack[-1])):
+                                not (while_count > 0 and re.match(r'^while:body', stack[-1]))\
+                                and not (do_count > 0 and re.match(r'^do:if', stack[-1])):
                             out_seq += stack.pop() + ' '
                         if if_count > 0 and re.match(r'^if M\d+$', stack[-1]):
                             tag = re.search('M\d+', stack[-1]).group(0)
@@ -610,11 +606,9 @@ class LecAnalysis():
                             tag = re.findall('M\d+', stack[-1])
                             out_seq += tag[0] + ' БП ' + tag[1] + ' : '
                             while_count -= 1
-                        if do_count > 0 and re.match(r'^do M\d+', stack[-1]):
-                            tag = re.findall('M\d+', stack[-1])
+                        if do_count > 0 and re.match(r'^do:if', stack[-1]):
                             stack.pop()
-                            tag_count+=1
-                            out_seq += 'M'+str(tag_count) + ' УПЛ ' + tag[0] + ' БП ' + 'M'+str(tag_count) +' : '
+                            out_seq += 'do:if '
                             do_count -= 1
                             is_do = False
                     else:
@@ -786,7 +780,6 @@ class LecAnalysis():
                 stack.append(replace[t[i]] if t[i] in replace else t[i])
                 arg0 = stack.pop()
                 out_seq += '\t'*tub_num + f'\t{arg0};\n'
-
             elif re.match(r"[0-9]+Ф",t[i]):
                 k = int(t[i].split('Ф')[0])
                 a = []
@@ -800,6 +793,14 @@ class LecAnalysis():
                     variable+=1
                 else:
                     stack.append(a[0]+'(' + ', '.join(a[1:]) + ')')
+            elif t[i]=='while:if':
+               out_seq+='\t'*tub_num+'while('+stack.pop()+'){\n'
+               tub_num+=1
+            elif t[i]=='while:body':
+                tub_num-=1
+                out_seq+=tub_num*'\t'+'}\n'
+            elif t[i]=='do:body':
+                tub_num+1
             else:
                 stack.append(t[i])
             i += 1

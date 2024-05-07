@@ -1,41 +1,10 @@
-b <- "aaaaaaaa";
-Rp0=paste("aaaaaa",b,sep="");
-print(Rp0);
-f=function(x, y){
-	a <- 1;
-	ar=function(){
-		r <- 1;
-		return(e);
+Rp0=(i == 0);
+while(Rp0){
+	a <- 123;
+	b <- 3455;
+	Rp1=(b > 0);
+	while(Rp1){
 	}
-	return(a);
 }
-f=function(x, y){
-	a <- 1;
-	return(a);
-}
-f=function(x, y){
-	a <- 1;
-	return(a);
-}
-f=function(x, y){
-	a <- 1;
-	return(a);
-}
-f=function(x, y){
-	a <- 1;
-	return(a);
-}
-f=function(x, y){
-	a <- 1;
-	return(a);
-}
-f=function(x, y){
-	a <- 1;
-	return(a);
-}
-f=function(x, y){
-	a <- 1;
-	return(a);
-}
-Rp1=(a + 1);
-a <- Rp1;
+a <- 1;
+Rp2=(i > 0);
