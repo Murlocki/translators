@@ -12,7 +12,7 @@ class LecAnalysis():
     def __init__(self):
         self.OPERATIONS = ['$','.','+','-','*','/','%','**','=','==','!=','>','>=','<','<=','<>','^','&','|','~','<<','>>','!','and','or','xor']
         self.CREATED_FUNC = ['pow','sqrt','sin','cos','tan','abs','log','log10','max','min','array']
-        self.SERVICE_WORDS = ['if','else','while','break','continue','function','return','echo','true','false','null','do']
+        self.SERVICE_WORDS = ['if','else','while','break','continue','function','return','echo','true','false','null','do','while:if','while:body',"do:st","do:body","do:if"]
         self.SEPARATORS = [',',';','(',')',' ','\n','\t',"'",'"','<?','?>','{','}','[',']','#']
         self.tokens = {'W':{},'I':{},'O':{},'R':{},'N':{},'C':{}}
 
@@ -712,19 +712,10 @@ class LecAnalysis():
                 result = stack.pop()
                 out_seq+='\t'*tub_num+'return('+result+');\n'
             elif t[i] == 'УПЛ':
-                if(t[i-1] in self.while_end_marks):
-                    arg1 = stack.pop()
-                    out_seq += '\t'*tub_num+f'while({arg1})' + '{\n'
-                    tub_num += 1
-                elif(t[i-1] in self.else_marks):
                     stack.pop()
                     arg1 = stack.pop()
                     out_seq += '\t'*tub_num+f'if ({arg1})' + '{\n'
                     tub_num += 1
-                elif (t[i + 1] in self.do_start_marks):
-                    arg1 = stack.pop()
-                    out_seq += '\t'*tub_num+f'if ({arg1})' + '{break;}\n}\n'
-                    tub_num -= 1
             elif t[i] == 'БП':
                 if (t[i - 1] in self.while_start_marks):
                     out_seq += '\t'*tub_num+'}\n'
@@ -739,9 +730,6 @@ class LecAnalysis():
                 elif(t[i-1] in self.if_marks):
                     out_seq+='\t'*tub_num+'}\n'
                     tub_num-=1
-                elif(t[i-1] in self.do_start_marks):
-                    out_seq+='\t'*tub_num+'repeat{\n'
-                    tub_num+=1
             elif t[i]=='echo':
                 arg1=stack.pop()
                 out_seq+='\t'*tub_num+f'print({arg1});\n'
@@ -799,12 +787,17 @@ class LecAnalysis():
             elif t[i]=='while:body':
                 tub_num-=1
                 out_seq+=tub_num*'\t'+'}\n'
+            elif t[i]=='do:st':
+                out_seq+=tub_num*'\t'+'repeat {\n'
+                tub_num += 1
             elif t[i]=='do:body':
-                tub_num+1
+                pass
+            elif t[i] == 'do:if':
+                out_seq+=tub_num*'\t'+f"if({stack.pop()})break\n"+(tub_num-1)*'\t'+"}\n"
+                tub_num-=1
             else:
                 stack.append(t[i])
             i += 1
-
         stack.clear()
         return out_seq
 

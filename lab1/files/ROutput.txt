@@ -1,10 +1,18 @@
-Rp0=(i == 0);
+Rp0=(a > 0);
 while(Rp0){
-	a <- 123;
-	b <- 3455;
-	Rp1=(b > 0);
-	while(Rp1){
+	Rp1=(a + 1);
+	a <- Rp1;
+	Rp2=(b > 0);
+	Rp3=(c < 10);
+	Rp4=(Rp2 && Rp3);
+	while(Rp4){
+		c <- 2;
 	}
 }
-a <- 1;
-Rp2=(i > 0);
+repeat {
+	a <- 1;
+	Rp5=(a > 0);
+	if(Rp5)break
+}
+Rp6=(b + 1);
+a <- sqrt(Rp6);

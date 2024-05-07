@@ -10,5 +10,10 @@
     "W9": "true",
     "W10": "false",
     "W11": "null",
-    "W12": "do"
+    "W12": "do",
+    "W13": "while:if",
+    "W14": "while:body",
+    "W15": "do:st",
+    "W16": "do:body",
+    "W17": "do:if"
 }
